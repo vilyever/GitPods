@@ -1,7 +1,12 @@
+import ModuleTable.ModuleModel;
+import Task.PodsLoader;
+import UI.ImportDialog;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.project.Project;
+
+import java.util.ArrayList;
 
 /**
  * Created by Vilyever on 2016/3/30.
@@ -16,7 +21,13 @@ public class ImportAction extends AnAction {
     public void actionPerformed(AnActionEvent anActionEvent) {
         setProject(anActionEvent.getData(PlatformDataKeys.PROJECT));
 
-        getImportDialog().setVisible(true);
+        PodsLoader.loadExistedPods(getProject(), new PodsLoader.LoaderDelegate() {
+            @Override
+            public void onPodsLoaded(ArrayList<ModuleModel> moduleModels) {
+                new ImportDialog(getProject(), moduleModels).setVisible(true);
+            }
+        });
+
     }
 
     private Project project;
@@ -26,16 +37,5 @@ public class ImportAction extends AnAction {
     }
     protected Project getProject() {
         return this.project;
-    }
-
-    private ImportDialog importDialog;
-    protected ImportDialog getImportDialog() {
-        if (this.importDialog == null) {
-            this.importDialog = new ImportDialog(getProject());
-            this.importDialog.setSize(800, 700);
-            this.importDialog.setLocationRelativeTo(null);
-            this.importDialog.setResizable(false);
-        }
-        return this.importDialog;
     }
 }

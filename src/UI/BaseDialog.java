@@ -1,4 +1,4 @@
-package util;
+package UI;
 
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
