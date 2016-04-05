@@ -2,11 +2,15 @@ package UI;
 
 import DependencyTable.DependencyCellRender;
 import DependencyTable.DependencyColumnType;
+import DependencyTable.DependencyModel;
 import DependencyTable.DependencyTableDataModel;
 import ModuleTable.ModuleModel;
 import ModuleTable.ModuleTableDataModel;
 import Task.PodsCompiler;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.DialogBuilder;
+import com.intellij.openapi.ui.DialogWrapper;
+import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.NotNull;
 import Task.PodsLoader;
 
@@ -35,6 +39,10 @@ public class ImportDialog extends BaseDialog {
         setModal(true);
         getRootPane().setDefaultButton(buttonOK);
 
+        setTitle("GitPods Import");
+        setSize(this.contentPane.getPreferredSize());
+        setLocationRelativeTo(null);
+
         buttonOK.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 onOK();
@@ -61,11 +69,6 @@ public class ImportDialog extends BaseDialog {
                 onCancel();
             }
         }, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
-
-
-        setTitle("GitPods Import");
-        setSize(this.contentPane.getPreferredSize());
-        setLocationRelativeTo(null);
 
         this.addDependencyButton.addActionListener(new ActionListener() {
             @Override
@@ -171,19 +174,51 @@ public class ImportDialog extends BaseDialog {
 
     private void onOK() {
 // add your code here
-        dispose();
-
-        PodsCompiler.compilePods(getProject(), getModuleTableDataModel().getModuleModels(), new PodsCompiler.CompilerDelegate() {
-            @Override
-            public void onCompileSuccess() {
-
+        boolean haveEmptyItem = false;
+        for (ModuleModel moduleModel : getModuleTableDataModel().getModuleModels()) {
+            ArrayList<DependencyModel> willRemovedModels = new ArrayList<>();
+            for (DependencyModel dependencyModel : moduleModel.getDependencyModels()) {
+                if (StringUtil.isEmpty(dependencyModel.getGitUrl())
+                        || StringUtil.isEmpty(dependencyModel.getTag())) {
+                    haveEmptyItem = true;
+                    break;
+                }
             }
-
-            @Override
-            public void onCompileFail(String reason) {
-                new ErrorDialog(getProject(), reason).setVisible(true);
+            if (haveEmptyItem) {
+                break;
             }
-        });
+        }
+
+        if (haveEmptyItem) {
+            DialogBuilder dialogBuilder = new DialogBuilder(getProject());
+            dialogBuilder.setTitle("Warning");
+            dialogBuilder.setCenterPanel(new JLabel("Items with empty giturl or tag will be removed."));
+            int result = dialogBuilder.show();
+            if (result == DialogWrapper.OK_EXIT_CODE) {
+                for (ModuleModel moduleModel : getModuleTableDataModel().getModuleModels()) {
+                    ArrayList<DependencyModel> willRemovedModels = new ArrayList<>();
+                    for (DependencyModel dependencyModel : moduleModel.getDependencyModels()) {
+                        if (StringUtil.isEmpty(dependencyModel.getGitUrl())
+                                || StringUtil.isEmpty(dependencyModel.getTag())) {
+                            willRemovedModels.add(dependencyModel);
+                        }
+                    }
+                    moduleModel.getDependencyModels().removeAll(willRemovedModels);
+
+                    for (DependencyModel dependencyModel : moduleModel.getDependencyModels()) {
+                        System.out.println("git: " + dependencyModel.getGitUrl());
+                        System.out.println("author: " + dependencyModel.getAuthor() + " ; repo : " + dependencyModel.getRepositoryName());
+                    }
+                }
+
+                dispose();
+                PodsCompiler.compilePods(getProject(), getModuleTableDataModel().getModuleModels());
+            }
+        }
+        else {
+            dispose();
+            PodsCompiler.compilePods(getProject(), getModuleTableDataModel().getModuleModels());
+        }
     }
 
     private void onCancel() {

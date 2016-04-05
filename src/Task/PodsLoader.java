@@ -32,12 +32,6 @@ public class PodsLoader {
             public void run(@NotNull ProgressIndicator progressIndicator) {
                 progressIndicator.setIndeterminate(true);
 
-                try {
-                    Thread.sleep(5000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
                 ArrayList<ModuleModel> moduleModels = new ArrayList<ModuleModel>();
 
                 Module projectModule = ModuleUtil.findModuleForFile(getProject().getBaseDir(), getProject());

@@ -25,8 +25,11 @@
   -->
 
   <depends>org.jetbrains.android</depends>
+  <depends>com.intellij.modules.vcs</depends>
+  <depends>com.intellij.modules.lang</depends>
   <depends>org.jetbrains.plugins.gradle</depends>
   <depends>com.intellij.properties</depends>
+  <depends>Git4Idea</depends>
   <extensions defaultExtensionNs="com.intellij">
     <!-- Add your extensions here -->
   </extensions>
