@@ -12,14 +12,17 @@ import com.intellij.openapi.ui.DialogBuilder;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.NotNull;
-import Task.PodsLoader;
 
 import javax.swing.*;
+import javax.swing.border.LineBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.table.TableCellEditor;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 public class ImportDialog extends BaseDialog {
     final ImportDialog self = this;
@@ -40,7 +43,7 @@ public class ImportDialog extends BaseDialog {
         getRootPane().setDefaultButton(buttonOK);
 
         setTitle("GitPods Import");
-        setSize(this.contentPane.getPreferredSize());
+        setMinimumSize(new Dimension(800, 600));
         setLocationRelativeTo(null);
 
         buttonOK.addActionListener(new ActionListener() {
@@ -94,7 +97,6 @@ public class ImportDialog extends BaseDialog {
         this.moduleTableView.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         this.moduleTableView.setDragEnabled(false);
         this.moduleTableView.getTableHeader().setReorderingAllowed(false);
-        this.moduleTableView.getTableHeader().setPreferredSize(new Dimension(-1, 30));
         this.moduleTableView.setRowHeight(30);
 
         this.moduleTableView.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
@@ -118,10 +120,20 @@ public class ImportDialog extends BaseDialog {
 
         this.dependencyTableView.setDragEnabled(false);
         this.dependencyTableView.getTableHeader().setReorderingAllowed(false);
-        this.dependencyTableView.getTableHeader().setPreferredSize(new Dimension(-1, 30));
         this.dependencyTableView.setRowHeight(30);
+        this.dependencyTableView.getColumn(DependencyColumnType.GitUrl.title()).setMinWidth(400);
         this.dependencyTableView.getColumn(DependencyColumnType.Tag.title()).setMaxWidth(120);
         this.dependencyTableView.getColumn(DependencyColumnType.Tag.title()).setMinWidth(120);
+        this.dependencyTableView.getColumn(DependencyColumnType.Alias.title()).setMinWidth(280);
+        this.dependencyTableView.getColumn(DependencyColumnType.UserName.title()).setMaxWidth(150);
+        this.dependencyTableView.getColumn(DependencyColumnType.UserName.title()).setMinWidth(150);
+        this.dependencyTableView.getColumn(DependencyColumnType.Password.title()).setMaxWidth(150);
+        this.dependencyTableView.getColumn(DependencyColumnType.Password.title()).setMinWidth(150);
+
+        JPasswordField password = new JPasswordField();
+        password.setBorder(new LineBorder(Color.BLACK));
+        TableCellEditor editor = new DefaultCellEditor(password);
+        this.dependencyTableView.getColumnModel().getColumn(DependencyColumnType.Password.ordinal()).setCellEditor(editor);
 
         this.dependencyTableView.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             @Override
@@ -138,14 +150,6 @@ public class ImportDialog extends BaseDialog {
 
         getModuleTableDataModel().setModuleModels(moduleModels);
         this.moduleTableView.setRowSelectionInterval(0, 0);
-
-//        PodsLoader.loadExistedPods(getProject(), new PodsLoader.LoaderDelegate() {
-//            @Override
-//            public void onPodsLoaded(ArrayList<ModuleModel> moduleModels) {
-//                getModuleTableDataModel().setModuleModels(moduleModels);
-//                self.moduleTableView.setRowSelectionInterval(0, 0);
-//            }
-//        });
     }
 
     private ModuleTableDataModel moduleTableDataModel;
@@ -174,6 +178,11 @@ public class ImportDialog extends BaseDialog {
 
     private void onOK() {
 // add your code here
+        TableCellEditor editor = this.dependencyTableView.getCellEditor();
+        if (editor != null) {
+            editor.stopCellEditing();
+        }
+
         boolean haveEmptyItem = false;
         for (ModuleModel moduleModel : getModuleTableDataModel().getModuleModels()) {
             ArrayList<DependencyModel> willRemovedModels = new ArrayList<>();
@@ -204,11 +213,6 @@ public class ImportDialog extends BaseDialog {
                         }
                     }
                     moduleModel.getDependencyModels().removeAll(willRemovedModels);
-
-                    for (DependencyModel dependencyModel : moduleModel.getDependencyModels()) {
-                        System.out.println("git: " + dependencyModel.getGitUrl());
-                        System.out.println("author: " + dependencyModel.getAuthor() + " ; repo : " + dependencyModel.getRepositoryName());
-                    }
                 }
 
                 dispose();

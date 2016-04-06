@@ -10,14 +10,39 @@ import java.awt.*;
  */
 public class DependencyCellRender extends DefaultTableCellRenderer {
 
+    private static final String ASTERISKS = "************************";
+
     public DependencyCellRender() {
         setHorizontalAlignment(JLabel.CENTER);
     }
 
     @Override
     public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-        JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-        label.setBorder(new EmptyBorder(0, 16, 0, 16));
-        return label;
+        super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+        setBorder(new EmptyBorder(0, 8, 0, 8));
+
+        if (column == DependencyColumnType.Password.ordinal()) {
+            int length =0;
+            if (value instanceof String) {
+                length =  ((String) value).length();
+            } else if (value instanceof char[]) {
+                length = ((char[])value).length;
+            }
+            setText(asterisks(length));
+        }
+
+        return this;
+    }
+
+    private String asterisks(int length) {
+        if (length > ASTERISKS.length()) {
+            StringBuilder sb = new StringBuilder(length);
+            for (int i = 0; i < length; i++) {
+                sb.append('*');
+            }
+            return sb.toString();
+        } else {
+            return ASTERISKS.substring(0, length);
+        }
     }
 }

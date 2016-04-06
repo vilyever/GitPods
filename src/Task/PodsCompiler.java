@@ -4,6 +4,7 @@ import DependencyTable.DependencyModel;
 import ModuleTable.ModuleModel;
 import UI.ErrorDialogBuilder;
 import Util.Configure;
+import Util.WriteActionUtil;
 import com.intellij.execution.ExecutableValidator;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;
@@ -93,6 +94,33 @@ public class PodsCompiler {
                                 break;
                             }
                         }
+                    }
+                }
+
+                progressIndicator.setText("Removing redundant dependencies");
+                VirtualFile[] repoDirs = gitPodsDir.getChildren();
+                ArrayList<VirtualFile> willRemainDirs = new ArrayList<VirtualFile>();
+                for (VirtualFile dir : repoDirs) {
+                    for (ModuleModel moduleModel : moduleModels) {
+                        for (DependencyModel dependencyModel : moduleModel.getDependencyModels()) {
+                            if (dir.getName().equals(dependencyModel.getRepositoryName())) {
+                                willRemainDirs.add(dir);
+                            }
+                        }
+                    }
+                }
+                for (VirtualFile dir : repoDirs) {
+                    if (!willRemainDirs.contains(dir)) {
+                        WriteActionUtil.runWriteAction(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    dir.delete(null);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        });
                     }
                 }
 

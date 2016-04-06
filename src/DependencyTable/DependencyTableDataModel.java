@@ -80,6 +80,15 @@ public class DependencyTableDataModel extends AbstractTableModel {
         else if (columnIndex == DependencyColumnType.Tag.ordinal()) {
             return model.getTag();
         }
+        else if (columnIndex == DependencyColumnType.Alias.ordinal()) {
+            return model.getAliasName();
+        }
+        else if (columnIndex == DependencyColumnType.UserName.ordinal()) {
+            return model.getUserName();
+        }
+        else if (columnIndex == DependencyColumnType.Password.ordinal()) {
+            return model.getPassword();
+        }
 
         return null;
     }
@@ -89,10 +98,24 @@ public class DependencyTableDataModel extends AbstractTableModel {
         DependencyModel model = getModuleModel().getDependencyModels().get(rowIndex);
 
         if (columnIndex == DependencyColumnType.GitUrl.ordinal()) {
-            model.setGitUrl((String) aValue);
+            String value = (String) aValue;
+            model.setGitUrl(value.trim());
         }
         else if (columnIndex == DependencyColumnType.Tag.ordinal()) {
-            model.setTag((String) aValue);
+            String value = (String) aValue;
+            model.setTag(value.trim());
+        }
+        else if (columnIndex == DependencyColumnType.Alias.ordinal()) {
+            String value = (String) aValue;
+            model.setAliasName(value.trim());
+        }
+        else if (columnIndex == DependencyColumnType.UserName.ordinal()) {
+            String value = (String) aValue;
+            model.setUserName(value.trim());
+        }
+        else if (columnIndex == DependencyColumnType.Password.ordinal()) {
+            String value = (String) aValue;
+            model.setPassword(value);
         }
     }
 

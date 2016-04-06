@@ -13,6 +13,7 @@ import com.intellij.openapi.progress.ProcessCanceledException;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.CharsetToolkit;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
@@ -28,50 +29,63 @@ public class PodsCompilerFetchDependencies {
 
     public static boolean fetchDependencies(Project project, VirtualFile gitPodsDir, DependencyModel dependencyModel) {
 
-        VirtualFile authorDir = gitPodsDir.findChild(dependencyModel.getAuthor());
-        VirtualFile repoDir = authorDir == null ? null : authorDir.findChild(dependencyModel.getRepositoryName());
+        if (dependencyModel.getRepositoryName() == null) {
+            ErrorDialogBuilder.showMessage("Unknown protocol of git url: " + dependencyModel.getGitUrl());
+            return false;
+        }
 
-        if (dependencyModel.getAuthor() == null
-                || dependencyModel.getRepositoryName() == null) {
-            repoDir = gitPodsDir.findChild(dependencyModel.getGitUrl());
+        VirtualFile repoDir = gitPodsDir.findChild(dependencyModel.getRepositoryName());
+
+        if (repoDir != null) {
+            if (repoDir.findChild(Configure.GitMaskDir) != null) {
+                final VirtualFile finalRepoGitDir = repoDir.findChild(Configure.GitMaskDir);
+
+                WriteActionUtil.runWriteAction(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            finalRepoGitDir.rename(null, Configure.GitDir);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+            }
+
+            if (repoDir.findChild(Configure.GitDir) == null) {
+                final VirtualFile finalRepoDir = repoDir;
+                WriteActionUtil.runWriteAction(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            finalRepoDir.delete(null);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                repoDir = null;
+            }
         }
 
         GeneralCommandLine fetchCommandLine = new GeneralCommandLine();
         fetchCommandLine.setExePath(GitVcsApplicationSettings.getInstance().getPathToGit());
         fetchCommandLine.setCharset(CharsetToolkit.getDefaultSystemCharset());
 
+        String fetchGitCommand;
         if (repoDir == null) {
+            fetchGitCommand = "clone";
             fetchCommandLine.setWorkDirectory(gitPodsDir.getPath());
-            fetchCommandLine.addParameter("clone");
-            fetchCommandLine.addParameter(dependencyModel.getGitUrl());
-            if (dependencyModel.getAuthor() == null
-                    || dependencyModel.getRepositoryName() == null) {
-                fetchCommandLine.addParameter(dependencyModel.getGitUrl());
-            }
-            else {
-                fetchCommandLine.addParameter(dependencyModel.getAuthor() + "/" + dependencyModel.getRepositoryName());
-            }
+            fetchCommandLine.addParameter(fetchGitCommand);
+            fetchCommandLine.addParameter(dependencyModel.getGitRepoUrl());
+            fetchCommandLine.addParameter(dependencyModel.getRepositoryName());
         }
         else {
-            final VirtualFile finalRepoDir = repoDir;
-            WriteActionUtil.runWriteAction(new Runnable() {
-                @Override
-                public void run() {
-                    VirtualFile gitDir = finalRepoDir.findChild(Configure.GitMaskDir);
-                    try {
-                        gitDir.rename(null, Configure.GitDir);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
-
+            fetchGitCommand = "fetch";
             fetchCommandLine.setWorkDirectory(repoDir.getPath());
-            fetchCommandLine.addParameter("fetch");
+            fetchCommandLine.addParameter(fetchGitCommand);
             fetchCommandLine.addParameter("origin");
         }
-
-        System.out.println("fetchCommandLine " + fetchCommandLine.getCommandLineString());
 
         String error = null;
         try {
@@ -80,12 +94,16 @@ public class PodsCompilerFetchDependencies {
             ProcessOutput result = handler.runProcessWithProgressIndicator(indicator);
 
             if (result.isTimeout()) {
-                error = "Run command timeout.";
+                error = "Run git " + fetchGitCommand + " timeout.";
             } else if (result.isCancelled()) {
             } else {
-                if (result.getExitCode() != 0 || !result.getStderr().isEmpty()) {
-//                    error = "ExitCode=" + result.getExitCode() + "; " + result.getStderr();
-                    error = result.getStderr();
+                if (result.getExitCode() != 0) {
+                    if (!result.getStderr().isEmpty()) {
+                        error = result.getStderr();
+                    }
+                    else {
+                        error = "ExitCode: " + result.getExitCode();
+                    }
                 }
             }
         }
@@ -99,13 +117,17 @@ public class PodsCompilerFetchDependencies {
             return false;
         }
 
-        authorDir = gitPodsDir.findChild(dependencyModel.getAuthor());
-        repoDir = authorDir == null ? null : authorDir.findChild(dependencyModel.getRepositoryName());
+        /* checkout tag */
+        WriteActionUtil.runWriteAction(new Runnable() {
+            @Override
+            public void run() {
+                VirtualFileManager.getInstance().syncRefresh();
+            }
+        });
 
-        if (dependencyModel.getAuthor() == null
-                || dependencyModel.getRepositoryName() == null) {
-            repoDir = gitPodsDir.findChild(dependencyModel.getGitUrl());
-        }
+        repoDir = gitPodsDir.findChild(dependencyModel.getRepositoryName());
+
+        System.out.println("repodir1 " + repoDir);
 
         if (repoDir == null) {
             ErrorDialogBuilder.showMessage("Unknown error: pods dir for '" + dependencyModel.getGitUrl()  + "' not found!");
@@ -126,12 +148,16 @@ public class PodsCompilerFetchDependencies {
             ProcessOutput result = handler.runProcessWithProgressIndicator(indicator);
 
             if (result.isTimeout()) {
-                error = "Run command timeout.";
+                error = "Run git checkout timeout.";
             } else if (result.isCancelled()) {
             } else {
-                if (result.getExitCode() != 0 || !result.getStderr().isEmpty()) {
-//                    error = "ExitCode=" + result.getExitCode() + "; " + result.getStderr();
-                    error = result.getStderr();
+                if (result.getExitCode() != 0) {
+                    if (!result.getStderr().isEmpty()) {
+                        error = result.getStderr();
+                    }
+                    else {
+                        error = "ExitCode: " + result.getExitCode();
+                    }
                 }
             }
         }
@@ -145,13 +171,12 @@ public class PodsCompilerFetchDependencies {
             return false;
         }
 
-        final VirtualFile finalRepoDir1 = repoDir;
+        final VirtualFile finalRepoGitDir = repoDir.findChild(Configure.GitDir);
         WriteActionUtil.runWriteAction(new Runnable() {
             @Override
             public void run() {
-                VirtualFile gitDir = finalRepoDir1.findChild(Configure.GitDir);
                 try {
-                    gitDir.rename(null, Configure.GitMaskDir);
+                    finalRepoGitDir.rename(null, Configure.GitMaskDir);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

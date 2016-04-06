@@ -1,12 +1,6 @@
 package Util;
 
 import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.vfs.VirtualFile;
-import org.apache.commons.io.IOUtils;
-
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
 
 /**
  * Created by vilyever on 2016/4/5.

@@ -1,3 +1,4 @@
+import DependencyTable.DependencyModel;
 import ModuleTable.ModuleModel;
 import Task.PodsLoader;
 import UI.ErrorDialogBuilder;
@@ -51,6 +52,11 @@ public class ImportAction extends AnAction {
     @Override
     public void actionPerformed(AnActionEvent anActionEvent) {
         setProject(anActionEvent.getData(PlatformDataKeys.PROJECT));
+
+        if (getProject() == null) {
+            ErrorDialogBuilder.showMessage("Can not find opening project.");
+            return;
+        }
 
         ApplicationManager.getApplication().saveAll();
 
