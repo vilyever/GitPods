@@ -24,6 +24,16 @@ public class DependencyModel {
         return this.tag;
     }
 
+    private String preTag;
+    public DependencyModel setPreTag(String preTag) {
+        this.preTag = preTag;
+        System.out.println("pretag " + preTag);
+        return this;
+    }
+    public String getPreTag() {
+        return this.preTag;
+    }
+
     private String aliasName;
     public DependencyModel setAliasName(String aliasName) {
         this.aliasName = aliasName;

@@ -16,7 +16,10 @@ import com.intellij.ide.BrowserUtil;
 import com.intellij.ide.ui.AppearanceOptionsTopHitProvider;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationListener;
+import com.intellij.notification.NotificationType;
+import com.intellij.notification.NotificationsManager;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.module.*;
 import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.options.ex.Settings;
 import com.intellij.openapi.progress.ProcessCanceledException;
@@ -28,10 +31,12 @@ import com.intellij.openapi.ui.DialogBuilder;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.MessageType;
 import com.intellij.openapi.ui.MultiLineLabelUI;
+import com.intellij.openapi.util.InvalidDataException;
 import com.intellij.openapi.vcs.VcsNotifier;
 import com.intellij.openapi.vcs.ui.VcsBalloonProblemNotifier;
 import com.intellij.openapi.vfs.CharsetToolkit;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.vcsUtil.VcsUtil;
 import git4idea.GitUtil;
 import git4idea.GitVcs;
@@ -46,6 +51,7 @@ import git4idea.config.GitVcsApplicationSettings;
 import git4idea.config.GitVersion;
 import git4idea.i18n.GitBundle;
 import git4idea.util.GitUIUtil;
+import org.jdom.JDOMException;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -123,6 +129,32 @@ public class PodsCompiler {
                         });
                     }
                 }
+
+                WriteActionUtil.runWriteAction(new Runnable() {
+                    @Override
+                    public void run() {
+                        VirtualFileManager.getInstance().syncRefresh();
+                    }
+                });
+
+//                for (VirtualFile dir : gitPodsDir.getChildren()) {
+//                    for (VirtualFile subDir : dir.getChildren()) {
+//                        if (subDir.isDirectory() && subDir.findChild("build.gradle") != null) {
+//                            System.out.println("subDir " + subDir.getName());
+//                            if (subDir.getName().equals("contextholder")) {
+//
+//                                WriteActionUtil.runWriteAction(new Runnable() {
+//                                    @Override
+//                                    public void run() {
+//                                        ModuleManager.getInstance(getProject()).newModule(subDir.getPath(), JavaModuleType.getModuleType().getId());
+//                                    }
+//                                });
+//                            }
+//                        }
+//                    }
+//                }
+
+//                ModuleManager.getInstance(getProject()).
 
                 // TODO: 2016/3/31 update all git and checkout specify tag
 

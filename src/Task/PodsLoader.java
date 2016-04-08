@@ -45,7 +45,7 @@ public class PodsLoader {
                         moduleModel.setName(module.getName());
 
                         VirtualFile moduleDir = LocalFileSystem.getInstance().findFileByPath(ModuleUtilCore.getModuleDirPath(module));
-                        VirtualFile podsFile = moduleDir.findChild(Configure.ModuleGitPodsFileName);
+                        VirtualFile podsFile = moduleDir.findChild(Configure.ModuleGitPodFileName);
                         if (podsFile != null) {
                             try {
                                 String content = VfsUtil.loadText(podsFile);
