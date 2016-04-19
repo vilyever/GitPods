@@ -51,6 +51,7 @@ import git4idea.config.GitVcsApplicationSettings;
 import git4idea.config.GitVersion;
 import git4idea.i18n.GitBundle;
 import git4idea.util.GitUIUtil;
+import org.apache.commons.io.IOUtils;
 import org.jdom.JDOMException;
 import org.jetbrains.annotations.NotNull;
 
@@ -59,7 +60,10 @@ import javax.swing.event.HyperlinkEvent;
 import javax.swing.text.TextAction;
 import java.awt.event.ActionEvent;
 import java.beans.PropertyChangeListener;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.concurrent.TimeoutException;
@@ -83,7 +87,6 @@ public class PodsCompiler {
                     return;
                 }
 
-                // TODO: 2016/3/31 check git downloaded
                 progressIndicator.setText("Check git available");
                 if (!PodsCompilerCheckGitAvailable.checkGitAvailable(getProject())) {
                     return;
@@ -138,21 +141,40 @@ public class PodsCompiler {
                 });
 
 //                for (VirtualFile dir : gitPodsDir.getChildren()) {
-//                    for (VirtualFile subDir : dir.getChildren()) {
-//                        if (subDir.isDirectory() && subDir.findChild("build.gradle") != null) {
-//                            System.out.println("subDir " + subDir.getName());
-//                            if (subDir.getName().equals("contextholder")) {
+//                    final ArrayList<VirtualFile> gitPodDirs = PodsCompilerFindModuleDir.findDependencyModuleDirs(gitPodsDir);
 //
-//                                WriteActionUtil.runWriteAction(new Runnable() {
-//                                    @Override
-//                                    public void run() {
-//                                        ModuleManager.getInstance(getProject()).newModule(subDir.getPath(), JavaModuleType.getModuleType().getId());
-//                                    }
-//                                });
-//                            }
-//                        }
-//                    }
 //                }
+
+                final VirtualFile settingFile = getProject().getBaseDir().findChild(Configure.ProjectSettingGradleFileName);
+                if (settingFile == null) {
+                    PodsError.showFailReason("settings.gradle not found!");
+                    return;
+                }
+                WriteActionUtil.runWriteAction(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            FileInputStream fileInputStream = new FileInputStream(settingFile.getPath());
+                            String fileContent = IOUtils.toString(fileInputStream, "UTF-8");
+                            fileInputStream.close();
+
+                            while (fileContent.contains(Configure.SettingEndMark)) {
+                                fileContent = fileContent.substring(fileContent.indexOf('\n') + 1);
+                            }
+
+                            String appendString = Configure.SettingBeginMark + "\n";
+                            appendString += Configure.SettingEndMark + "\n";
+
+                            fileContent = appendString + fileContent;
+                            FileOutputStream fileOutputStream = new FileOutputStream(settingFile.getPath());
+                            fileOutputStream.write(fileContent.getBytes("UTF-8"));
+                            fileOutputStream.close();
+
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
 
 //                ModuleManager.getInstance(getProject()).
 

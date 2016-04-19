@@ -17,6 +17,9 @@ public class Configure {
     public static final String GitPodsIgnore = "__gitpods__/";
 
     public static final String ProjectSettingGradleFileName = "settings.gradle";
+    public static final String SettingBeginMark = "// This is automatically generate by GitPods, please do not edit";
+    public static final String SettingEndMark = "// Upper is automatically generate by GitPods, please do not edit";
+
     public static final String ModuleBuildGradleFileName = "build.gradle";
     public static final String GitPodsModuleBuildGradleExtFileName = "build_gitpods.gradle";
 
