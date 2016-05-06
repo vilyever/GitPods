@@ -8,7 +8,7 @@ public class Configure {
     public static final String GitPodsJsonKeyForGitUrl = "git_url";
     public static final String GitPodsJsonKeyForTag = "tag";
 
-    public static final String GitPodsRepositoriesDirName = ".gitpods";
+    public static final String GitPodsRepositoriesDirName = "__gitpods__";
     public static final String GitIgnoreFileName = ".gitignore";
     public static final String GitDir = ".git";
     public static final String GitMaskDir = ".git_mask";

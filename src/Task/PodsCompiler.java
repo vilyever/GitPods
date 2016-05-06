@@ -5,6 +5,8 @@ import ModuleTable.ModuleModel;
 import UI.ErrorDialogBuilder;
 import Util.Configure;
 import Util.WriteActionUtil;
+import com.android.tools.idea.gradle.eclipse.GradleImport;
+import com.android.tools.idea.gradle.project.GradleProjectImporter;
 import com.intellij.execution.ExecutableValidator;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;
@@ -52,8 +54,12 @@ import git4idea.config.GitVersion;
 import git4idea.i18n.GitBundle;
 import git4idea.util.GitUIUtil;
 import org.apache.commons.io.IOUtils;
+import org.gradle.api.invocation.Gradle;
+import org.gradle.api.tasks.GradleBuild;
 import org.jdom.JDOMException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.plugins.gradle.settings.GradleSettings;
+import org.jetbrains.plugins.gradle.util.GradleUtil;
 
 import javax.swing.*;
 import javax.swing.event.HyperlinkEvent;
@@ -82,7 +88,7 @@ public class PodsCompiler {
                 progressIndicator.setIndeterminate(true);
 
                 progressIndicator.setText("Check git pods dir");
-                VirtualFile gitPodsDir = PodsCompilerCreateDir.createGitPodsDir(getProject());
+                final VirtualFile gitPodsDir = PodsCompilerCreateDir.createGitPodsDir(getProject());
                 if (gitPodsDir == null) {
                     return;
                 }
@@ -100,95 +106,29 @@ public class PodsCompiler {
                             progressIndicator.setText("Fetching " + dependencyModel.getGitUrl());
                             boolean result = PodsCompilerFetchDependencies.fetchDependencies(getProject(), gitPodsDir, dependencyModel);
                             if (!result) {
-                                break;
+                                return;
                             }
                         }
                     }
                 }
 
                 progressIndicator.setText("Removing redundant dependencies");
-                VirtualFile[] repoDirs = gitPodsDir.getChildren();
-                ArrayList<VirtualFile> willRemainDirs = new ArrayList<VirtualFile>();
-                for (VirtualFile dir : repoDirs) {
-                    for (ModuleModel moduleModel : moduleModels) {
-                        for (DependencyModel dependencyModel : moduleModel.getDependencyModels()) {
-                            if (dir.getName().equals(dependencyModel.getRepositoryName())) {
-                                willRemainDirs.add(dir);
-                            }
-                        }
-                    }
-                }
-                for (VirtualFile dir : repoDirs) {
-                    if (!willRemainDirs.contains(dir)) {
-                        WriteActionUtil.runWriteAction(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    dir.delete(null);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        });
-                    }
-                }
-
-                WriteActionUtil.runWriteAction(new Runnable() {
-                    @Override
-                    public void run() {
-                        VirtualFileManager.getInstance().syncRefresh();
-                    }
-                });
+                PodsCompilerRemoveRedundant.removeRedundantDependencies(gitPodsDir, moduleModels);
 
 //                for (VirtualFile dir : gitPodsDir.getChildren()) {
 //                    final ArrayList<VirtualFile> gitPodDirs = PodsCompilerFindModuleDir.findDependencyModuleDirs(gitPodsDir);
 //
 //                }
 
-                final VirtualFile settingFile = getProject().getBaseDir().findChild(Configure.ProjectSettingGradleFileName);
-                if (settingFile == null) {
-                    PodsError.showFailReason("settings.gradle not found!");
+                // TODO: 2016/3/31 find out library modules and import to project
+                // TODO: 2016/3/31 modify build.gradle to make module as dependency
+                progressIndicator.setText("Generating build files");
+                if (!PodsCompilerGenerateBuild.generateBuild(getProject(), gitPodsDir, moduleModels)) {
                     return;
                 }
-                WriteActionUtil.runWriteAction(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            FileInputStream fileInputStream = new FileInputStream(settingFile.getPath());
-                            String fileContent = IOUtils.toString(fileInputStream, "UTF-8");
-                            fileInputStream.close();
-
-                            while (fileContent.contains(Configure.SettingEndMark)) {
-                                fileContent = fileContent.substring(fileContent.indexOf('\n') + 1);
-                            }
-
-                            String appendString = Configure.SettingBeginMark + "\n";
-                            appendString += Configure.SettingEndMark + "\n";
-
-                            fileContent = appendString + fileContent;
-                            FileOutputStream fileOutputStream = new FileOutputStream(settingFile.getPath());
-                            fileOutputStream.write(fileContent.getBytes("UTF-8"));
-                            fileOutputStream.close();
-
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
-
-//                ModuleManager.getInstance(getProject()).
-
-                // TODO: 2016/3/31 update all git and checkout specify tag
-
-                // TODO: 2016/3/31 find out library modules and import to project
-
-                // TODO: 2016/3/31 modify build.gradle to make module as dependency
 
                 // TODO: 2016/3/31 sync gradle
-
-                // TODO: 2016/3/31 write .gitpods
-
-                System.out.println("compile over");
+                GradleProjectImporter.getInstance().requestProjectSync(getProject(), null);
             }
 
             @Override
